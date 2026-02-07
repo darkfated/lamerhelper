@@ -1,0 +1,22 @@
+[package]
+name = "lamerhelper"
+version = "0.1.0"
+description = "Приложение с плагинами"
+authors = ["darkfated"]
+edition = "2024"
+
+[lib]
+name = "tauri_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.10.2", features = [] }
+tauri-plugin-opener = "2.5.3"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55.0"
