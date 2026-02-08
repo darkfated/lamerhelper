@@ -1,7 +1,7 @@
-﻿use crate::core::{
+﻿use crate::core::api::{format_bytes, short_path};
+use crate::core::{
     Logger, Plugin, PluginApi, PluginMeta, PluginPreview, SettingField, SettingKind,
 };
-use crate::core::api::{format_bytes, short_path};
 use serde::Deserialize;
 use serde_json::json;
 use std::fs;
@@ -161,10 +161,7 @@ impl Plugin for TempCleanerPlugin {
             }
             logger.info(format!("Раздел: {}", target.label));
             if !target.path.exists() {
-                logger.warn(format!(
-                    "Путь не найден: {}",
-                    short_path(&target.path, 4)
-                ));
+                logger.warn(format!("Путь не найден: {}", short_path(&target.path, 4)));
                 continue;
             }
             let entries = match fs::read_dir(&target.path) {
@@ -296,7 +293,7 @@ impl Plugin for TempCleanerPlugin {
             "Итог: файлов {files}, папок {dirs}, ошибок {errors}."
         ));
         if settings.dry_run {
-            logger.info("Освобождено: 0 B (режим проверки).".to_string());
+            logger.info("Режим проверки. Файлы, что могли были очищены перечислены.".to_string());
         } else {
             logger.info(format!("Освобождено: {}", format_bytes(freed_bytes)));
         }

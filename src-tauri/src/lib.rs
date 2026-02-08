@@ -14,7 +14,7 @@ async fn preview_plugin(app: AppHandle, id: String) -> Result<Option<PluginPrevi
     let handle = app.clone();
     tauri::async_runtime::spawn_blocking(move || core::preview_plugin(handle, &id))
         .await
-        .map_err(|e| format!("Preview task failed: {e}"))?
+        .map_err(|e| format!("Не удалось запустить превью задачу: {e}"))?
 }
 
 #[tauri::command]
@@ -22,7 +22,7 @@ async fn run_plugin(app: AppHandle, id: String, settings: Value) -> Result<RunRe
     let handle = app.clone();
     tauri::async_runtime::spawn_blocking(move || core::run_plugin(handle, &id, settings))
         .await
-        .map_err(|e| format!("Run task failed: {e}"))?
+        .map_err(|e| format!("Не удалось запустить задачу: {e}"))?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
