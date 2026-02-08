@@ -1,171 +1,179 @@
 ﻿<script setup>
-import { invoke } from "@tauri-apps/api/core";
-import { computed, onMounted, ref } from "vue";
-import ConsolePanel from "./components/ConsolePanel.vue";
-import PluginList from "./components/PluginList.vue";
-import PluginPanel from "./components/PluginPanel.vue";
+import {invoke} from '@tauri-apps/api/core'
+import {computed, onMounted, ref} from 'vue'
+import ConsolePanel from './components/ConsolePanel.vue'
+import PluginList from './components/PluginList.vue'
+import PluginPanel from './components/PluginPanel.vue'
 
-const plugins = ref([]);
-const loading = ref(false);
-const viewMode = ref("list");
-const selectedId = ref("");
-const settings = ref({});
-const logs = ref([]);
-const status = ref({ ok: true, message: "" });
-const running = ref(false);
-const error = ref("");
-const logSession = ref(0);
-const preview = ref(null);
+const plugins = ref([])
+const loading = ref(false)
+const viewMode = ref('list')
+const selectedId = ref('')
+const settings = ref({})
+const logs = ref([])
+const status = ref({ok: true, message: ''})
+const running = ref(false)
+const error = ref('')
+const logSession = ref(0)
+const preview = ref(null)
+const showSettings = ref(false)
 
 const selectedPlugin = computed(
-  () => plugins.value.find((plugin) => plugin.id === selectedId.value) || null
-);
+    () => plugins.value.find((plugin) => plugin.id === selectedId.value) || null,
+)
 
 function cloneValue(value) {
-  return value ? JSON.parse(JSON.stringify(value)) : {};
+  return value ? JSON.parse(JSON.stringify(value)) : {}
 }
 
 function resetForPlugin(plugin) {
-  logSession.value += 1;
-  settings.value = cloneValue(plugin.defaults || {});
-  logs.value = [];
-  status.value = { ok: true, message: "" };
+  logSession.value += 1
+  settings.value = cloneValue(plugin.defaults || {})
+  logs.value = []
+  status.value = {ok: true, message: ''}
 }
 
 function showError(message) {
-  error.value = message;
+  error.value = message
   setTimeout(() => {
-    error.value = "";
-  }, 4000);
+    error.value = ''
+  }, 4000)
+}
+
+function openSettings() {
+  showSettings.value = true
+}
+
+function closeSettings() {
+  showSettings.value = false
 }
 
 function nextLogSession() {
-  logSession.value += 1;
-  return logSession.value;
+  logSession.value += 1
+  return logSession.value
 }
 
 function logDelay(count) {
-  if (count > 80) return 30;
-  if (count > 40) return 60;
-  if (count > 20) return 90;
-  return 140;
+  if (count > 80) return 30
+  if (count > 40) return 60
+  if (count > 20) return 90
+  return 140
 }
 
 function stampLog(entry) {
   return {
     ...entry,
-    time: new Date().toLocaleTimeString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+    time: new Date().toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
       hour12: false,
     }),
-  };
+  }
 }
 
 async function appendLogs(entries, sessionId, delay) {
   for (const entry of entries || []) {
-    if (sessionId !== logSession.value) break;
-    logs.value = [...logs.value, stampLog(entry)];
-    await new Promise((resolve) => setTimeout(resolve, delay));
+    if (sessionId !== logSession.value) break
+    logs.value = [...logs.value, stampLog(entry)]
+    await new Promise((resolve) => setTimeout(resolve, delay))
   }
 }
 
 async function loadPlugins() {
-  loading.value = true;
+  loading.value = true
   try {
-    const result = await invoke("list_plugins");
-    plugins.value = result;
+    plugins.value = await invoke('list_plugins')
 
-    if (viewMode.value === "detail") {
+    if (viewMode.value === 'detail') {
       const exists = plugins.value.find(
-        (plugin) => plugin.id === selectedId.value
-      );
+          (plugin) => plugin.id === selectedId.value,
+      )
       if (!exists) {
-        backToList();
+        backToList()
       }
     }
   } catch (err) {
-    showError(String(err));
+    showError(String(err))
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
 async function loadPreview(id) {
   try {
-    const result = await invoke("preview_plugin", { id });
-    preview.value = result;
+    preview.value = await invoke('preview_plugin', {id})
   } catch (err) {
-    preview.value = null;
+    preview.value = null
   }
 }
 
 function selectPlugin(id) {
-  const plugin = plugins.value.find((item) => item.id === id);
-  if (!plugin) return;
-  selectedId.value = id;
-  viewMode.value = "detail";
-  resetForPlugin(plugin);
-  loadPreview(id);
+  const plugin = plugins.value.find((item) => item.id === id)
+  if (!plugin) return
+  selectedId.value = id
+  viewMode.value = 'detail'
+  resetForPlugin(plugin)
+  loadPreview(id)
 }
 
 function backToList() {
-  logSession.value += 1;
-  viewMode.value = "list";
-  selectedId.value = "";
-  logs.value = [];
-  status.value = { ok: true, message: "" };
-  preview.value = null;
+  logSession.value += 1
+  viewMode.value = 'list'
+  selectedId.value = ''
+  logs.value = []
+  status.value = {ok: true, message: ''}
+  preview.value = null
 }
 
 async function runSelected() {
-  if (!selectedPlugin.value) return;
-  running.value = true;
-  const sessionId = nextLogSession();
+  if (!selectedPlugin.value) return
+  running.value = true
+  const sessionId = nextLogSession()
   await appendLogs(
-    [{ level: "info", message: "--- Запуск ---" }],
-    sessionId,
-    80
-  );
-  status.value = { ok: true, message: "Выполняется..." };
+      [{level: 'info', message: '--- Запуск ---'}],
+      sessionId,
+      80,
+  )
+  status.value = {ok: true, message: 'Выполняется...'}
 
   try {
-    const result = await invoke("run_plugin", {
+    const result = await invoke('run_plugin', {
       id: selectedPlugin.value.id,
       settings: settings.value,
-    });
-    const delay = logDelay((result.logs || []).length);
-    await appendLogs(result.logs || [], sessionId, delay);
-    status.value = { ok: result.ok, message: result.message };
+    })
+    const delay = logDelay((result.logs || []).length)
+    await appendLogs(result.logs || [], sessionId, delay)
+    status.value = {ok: result.ok, message: result.message}
   } catch (err) {
-    showError(String(err));
+    showError(String(err))
     await appendLogs(
-      [{ level: "error", message: "Ошибка запуска." }],
-      sessionId,
-      100
-    );
-    status.value = { ok: false, message: "Ошибка запуска." };
+        [{level: 'error', message: 'Ошибка запуска.'}],
+        sessionId,
+        100,
+    )
+    status.value = {ok: false, message: 'Ошибка запуска.'}
   } finally {
-    running.value = false;
+    running.value = false
   }
 }
 
 onMounted(() => {
-  loadPlugins();
-});
+  loadPlugins()
+})
 </script>
 
 <template>
   <div class="app">
     <div class="background"></div>
 
-    <main class="main-area">
+    <main class="main-area" :class="{ 'no-console': viewMode === 'list' }">
       <div class="workspace" :class="{ 'detail-mode': viewMode === 'detail' }">
-        <PluginList v-if="viewMode === 'list'" :plugins="plugins" :loading="loading" @select="selectPlugin" />
+        <PluginList v-if="viewMode === 'list'" :plugins="plugins" :loading="loading" @select="selectPlugin"
+                    @settings="openSettings"/>
 
         <PluginPanel v-else-if="selectedPlugin" v-model="settings" :plugin="selectedPlugin" :preview="preview"
-          :running="running" @run="runSelected" @back="backToList" />
+                     :running="running" @run="runSelected" @back="backToList"/>
 
         <div v-else class="empty-state">
           Плагин не найден.
@@ -173,7 +181,29 @@ onMounted(() => {
       </div>
     </main>
 
-    <ConsolePanel :logs="logs" :status="status" />
+    <div v-if="showSettings" class="settings-overlay" @click.self="closeSettings">
+      <div class="settings-modal" role="dialog" aria-modal="true">
+        <div class="settings-modal-header">
+          <div>
+            <div class="settings-modal-kicker">LamerHelper</div>
+            <h3>О приложении</h3>
+          </div>
+          <button class="btn ghost" type="button" @click="closeSettings">Закрыть</button>
+        </div>
+        <div class="settings-modal-body">
+          <div class="settings-item">
+            <span class="settings-item-label">GitHub</span>
+            <span class="settings-link">github.com/darkfated/lamerhelper</span>
+          </div>
+          <div class="settings-item">
+            <span class="settings-item-label">Авторское право</span>
+            <span class="settings-item-value">© 2026 LamerHelper</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ConsolePanel v-if="viewMode === 'detail'" :logs="logs" :status="status"/>
 
     <div v-if="error" class="toast">{{ error }}</div>
   </div>
@@ -257,11 +287,10 @@ body {
 .background {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(69, 240, 177, 0.24), transparent 48%),
-    radial-gradient(circle at 86% 14%, rgba(56, 198, 255, 0.2), transparent 54%),
-    radial-gradient(circle at 50% 88%, rgba(255, 255, 255, 0.1), transparent 58%),
-    linear-gradient(140deg, #0f1626, #141c2e 45%, #0f1626 100%);
+  background: radial-gradient(circle at 12% 18%, rgba(69, 240, 177, 0.24), transparent 48%),
+  radial-gradient(circle at 86% 14%, rgba(56, 198, 255, 0.2), transparent 54%),
+  radial-gradient(circle at 50% 88%, rgba(255, 255, 255, 0.1), transparent 58%),
+  linear-gradient(140deg, #0f1626, #141c2e 45%, #0f1626 100%);
   z-index: -1;
 }
 
@@ -269,6 +298,96 @@ body {
   flex: 1;
   min-height: 0;
   padding-bottom: calc(var(--console-height-base) + var(--console-offset) + var(--console-gap));
+}
+
+.main-area.no-console {
+  padding-bottom: clamp(12px, 2vw, 20px);
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  backdrop-filter: blur(12px);
+}
+
+.settings-modal {
+  width: min(92vw, 520px);
+  background: linear-gradient(160deg, rgba(30, 40, 58, 0.98), rgba(16, 22, 34, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  padding: clamp(16px, 2.4vw, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.settings-modal-header h3 {
+  margin: 6px 0 4px;
+  font-size: 20px;
+}
+
+
+.settings-modal-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 10px;
+  color: rgba(69, 240, 177, 0.92);
+  font-weight: 600;
+}
+
+.settings-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(14, 20, 32, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-item-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(214, 224, 236, 0.72);
+}
+
+.settings-item-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-link {
+  border: 1px solid rgba(69, 240, 177, 0.2);
+  background: rgba(69, 240, 177, 0.08);
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: default;
+  text-decoration: none;
 }
 
 .workspace {
@@ -291,7 +410,7 @@ body {
   height: 100%;
   width: 100%;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   gap: 18px;
   background: linear-gradient(160deg, rgba(28, 36, 52, 0.96), rgba(18, 24, 36, 0.94));
   border: 1px solid var(--stroke);
@@ -307,15 +426,41 @@ body {
 .list-hero {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 20px;
   padding: 6px 4px 12px;
+}
+
+.list-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .list-hero-text h1 {
   margin: 6px 0 6px;
   font-size: 26px;
   letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(69, 240, 177, 0.18);
+  color: rgba(69, 240, 177, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(69, 240, 177, 0.3);
+}
+
+.hero-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .list-hero-text p {
@@ -337,18 +482,22 @@ body {
   background: rgba(16, 22, 34, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
-  padding: 10px 14px;
+  padding: 0 14px;
   min-width: 110px;
-  display: grid;
-  place-items: center;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .badge-number {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--accent);
+  line-height: 1;
 }
 
 .badge-label {
@@ -356,6 +505,34 @@ body {
   letter-spacing: 0.18em;
   font-size: 10px;
   color: var(--muted);
+  line-height: 1;
+}
+
+.list-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 4px;
+}
+
+.list-tab {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(14, 20, 32, 0.7);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.list-tab.active {
+  background: rgba(69, 240, 177, 0.16);
+  color: #e9fff6;
+  border-color: rgba(69, 240, 177, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(69, 240, 177, 0.12);
 }
 
 .list-grid {
@@ -370,7 +547,6 @@ body {
   align-content: start;
   align-items: stretch;
 }
-
 
 
 .list-card {
@@ -469,6 +645,34 @@ body {
   font-family: var(--mono);
 }
 
+.list-settings-btn {
+  height: 40px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 8px 14px;
+}
+
+.with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .plugin-panel {
   height: 100%;
   width: 100%;
@@ -492,6 +696,12 @@ body {
   gap: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.panel-header .btn.primary {
+  margin-left: auto;
+  flex: 0 0 auto;
+  align-self: flex-start;
 }
 
 .panel-title {
@@ -872,12 +1082,12 @@ body {
   transform: translateY(-50%);
 }
 
-.switch input:checked+.slider {
+.switch input:checked + .slider {
   background: rgba(69, 240, 177, 0.25);
   border-color: rgba(69, 240, 177, 0.5);
 }
 
-.switch input:checked+.slider::before {
+.switch input:checked + .slider::before {
   transform: translateX(18px) translateY(-50%);
   background: var(--accent);
 }
@@ -906,6 +1116,11 @@ body {
 
   .list-hero-badge {
     align-self: flex-start;
+  }
+
+  .list-hero-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -999,6 +1214,12 @@ body {
   position: relative;
 }
 
+.console-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .console-status {
   text-transform: none;
   letter-spacing: normal;
@@ -1069,7 +1290,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding-left: var(--indent, 0px);
 }
 
 .console-detail {
@@ -1116,8 +1336,3 @@ body {
   color: var(--muted);
 }
 </style>
-.panel-header .btn.primary {
-margin-left: auto;
-flex: 0 0 auto;
-align-self: flex-start;
-}

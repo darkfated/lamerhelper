@@ -1,13 +1,13 @@
 ﻿# LamerHelper
 
-Десктопное приложение с утилитам-плагинами для кастомизации и оптимизации вашего компьютера.
+Простой интерфейс, мощные плагины. Укрась и ускорь свой ПК за пару кликов.
 
 ## Стек
 
 - Frontend: Vue 3, Vite
 - Backend: Tauri 2, Rust
 
-## Быстрый старт
+## Документация
 
 - `yarn install`
 - `yarn tauri dev`
@@ -34,7 +34,7 @@
 
 1. Создайте файл `src-tauri/src/plugins/*_plugin.rs`.
 2. Опишите `PluginMeta` и настройки.
-3. Реализуйте `run`.
+3. Реализуйте функциональность в `run`.
 
 Шаблон:
 
@@ -61,6 +61,7 @@ impl Plugin for MyPlugin {
             id: "my_plugin".to_string(),
             name: "Мой плагин".to_string(),
             description: "Делает полезную вещь".to_string(),
+            category: "Другое".to_string(),
             settings: vec![SettingField {
                 key: "enabled".to_string(),
                 label: "Включить".to_string(),

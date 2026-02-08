@@ -32,6 +32,7 @@ impl Plugin for TestPlugin {
             id: "test_plugin".to_string(),
             name: "Тестовый плагин".to_string(),
             description: "Проверяет все типы настроек UI.".to_string(),
+            category: "Другое".to_string(),
             settings: vec![
                 SettingField {
                     key: "enabled".to_string(),

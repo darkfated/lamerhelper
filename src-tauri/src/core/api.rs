@@ -1,6 +1,6 @@
-﻿use std::{
+use std::{
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 use tauri::{AppHandle, Manager};
 
@@ -41,8 +41,8 @@ impl PluginApi {
 
     #[cfg(windows)]
     pub fn get_registry_string(&self, key_path: &str, name: &str) -> Result<String, String> {
-        use winreg::enums::{HKEY_CURRENT_USER, KEY_QUERY_VALUE};
         use winreg::RegKey;
+        use winreg::enums::{HKEY_CURRENT_USER, KEY_QUERY_VALUE};
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let key = hkcu
@@ -62,7 +62,7 @@ impl PluginApi {
     #[cfg(windows)]
     pub fn restart_explorer(&self) -> Result<(), String> {
         use std::process::Command;
-
+        
         let status = Command::new("taskkill")
             .args(["/F", "/IM", "explorer.exe"])
             .status()
@@ -91,8 +91,8 @@ impl PluginApi {
         name: &str,
         value: &str,
     ) -> Result<(), String> {
-        use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
         use winreg::RegKey;
+        use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let key = hkcu
@@ -111,5 +111,45 @@ impl PluginApi {
         _value: &str,
     ) -> Result<(), String> {
         Err("Registry доступен только на Windows.".to_string())
+    }
+}
+
+pub fn short_path(path: &Path, max_segments: usize) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    for component in path.components() {
+        if let Component::Normal(part) = component {
+            parts.push(part.to_string_lossy().to_string());
+        }
+    }
+
+    if parts.is_empty() {
+        return path.display().to_string();
+    }
+
+    if parts.len() <= max_segments {
+        return parts.join("\\");
+    }
+
+    let start = parts.len().saturating_sub(max_segments);
+    format!("…\\{}", parts[start..].join("\\"))
+}
+
+pub fn format_bytes(bytes: u64) -> String {
+    const KB: f64 = 1024.0;
+    const MB: f64 = KB * 1024.0;
+    const GB: f64 = MB * 1024.0;
+    const TB: f64 = GB * 1024.0;
+
+    let bytes_f = bytes as f64;
+    if bytes_f >= TB {
+        format!("{:.2} TB", bytes_f / TB)
+    } else if bytes_f >= GB {
+        format!("{:.2} GB", bytes_f / GB)
+    } else if bytes_f >= MB {
+        format!("{:.2} MB", bytes_f / MB)
+    } else if bytes_f >= KB {
+        format!("{:.2} KB", bytes_f / KB)
+    } else {
+        format!("{bytes} B")
     }
 }

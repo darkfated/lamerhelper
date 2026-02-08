@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -46,6 +46,7 @@ pub struct PluginMeta {
     pub id: String,
     pub name: String,
     pub description: String,
+    pub category: String,
     pub settings: Vec<SettingField>,
 }
 
@@ -54,6 +55,7 @@ pub struct PluginInfo {
     pub id: String,
     pub name: String,
     pub description: String,
+    pub category: String,
     pub settings: Vec<SettingField>,
     pub defaults: Value,
 }
@@ -65,6 +67,7 @@ impl PluginInfo {
             id: meta.id,
             name: meta.name,
             description: meta.description,
+            category: meta.category,
             settings: meta.settings,
             defaults,
         }
@@ -107,9 +110,7 @@ pub fn validate_settings(settings: &Value, fields: &[SettingField]) -> Vec<Strin
             continue;
         }
         match values.get(&field.key) {
-            Some(Value::Null) | None => {
-                errors.push(format!("Поле '{}' обязательно.", field.label))
-            }
+            Some(Value::Null) | None => errors.push(format!("Поле '{}' обязательно.", field.label)),
             _ => {}
         }
     }

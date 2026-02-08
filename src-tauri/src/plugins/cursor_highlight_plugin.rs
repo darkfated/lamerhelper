@@ -30,6 +30,7 @@ impl Plugin for CursorHighlightPlugin {
             id: "cursor_highlight".to_string(),
             name: "Цвет выделения".to_string(),
             description: "Настройка цветов выделения и подсветки в Windows.".to_string(),
+            category: "Визуал".to_string(),
             settings: vec![
                 SettingField {
                     key: "hilight_color".to_string(),

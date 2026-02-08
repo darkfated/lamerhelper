@@ -1,4 +1,4 @@
-﻿use serde::Serialize;
+use serde::Serialize;
 use serde_json::Value;
 use tauri::AppHandle;
 
@@ -6,7 +6,7 @@ use crate::core::api::PluginApi;
 use crate::core::logger::{Logger, RunResult};
 use crate::core::registry::all_plugins;
 use crate::core::settings::{
-    defaults_from_fields, merge_settings, validate_settings, PluginInfo, PluginMeta,
+    PluginInfo, PluginMeta, defaults_from_fields, merge_settings, validate_settings,
 };
 
 pub trait Plugin: Send + Sync {
@@ -17,12 +17,7 @@ pub trait Plugin: Send + Sync {
     fn preview(&self, _api: &PluginApi) -> Result<Option<PluginPreview>, String> {
         Ok(None)
     }
-    fn run(
-        &self,
-        api: &PluginApi,
-        settings: &Value,
-        logger: &mut Logger,
-    ) -> Result<(), String>;
+    fn run(&self, api: &PluginApi, settings: &Value, logger: &mut Logger) -> Result<(), String>;
 }
 
 pub fn list_plugins(app: AppHandle) -> Vec<PluginInfo> {
@@ -137,8 +132,8 @@ fn format_value(value: &Value) -> String {
         Value::Bool(value) => value.to_string(),
         Value::Number(value) => value.to_string(),
         Value::String(value) => value.clone(),
-        Value::Array(_) | Value::Object(_) => serde_json::to_string_pretty(value)
-            .unwrap_or_else(|_| "[complex]".to_string()),
+        Value::Array(_) | Value::Object(_) => {
+            serde_json::to_string_pretty(value).unwrap_or_else(|_| "[complex]".to_string())
+        }
     }
 }
-

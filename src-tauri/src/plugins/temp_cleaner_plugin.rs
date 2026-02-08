@@ -1,6 +1,7 @@
 ﻿use crate::core::{
     Logger, Plugin, PluginApi, PluginMeta, PluginPreview, SettingField, SettingKind,
 };
+use crate::core::api::{format_bytes, short_path};
 use serde::Deserialize;
 use serde_json::json;
 use std::fs;
@@ -48,6 +49,7 @@ impl Plugin for TempCleanerPlugin {
             id: "temp_cleaner".to_string(),
             name: "Очистка системы".to_string(),
             description: "Очистка неудаляемых временных файлов.".to_string(),
+            category: "Оптимизация".to_string(),
             settings: vec![
                 SettingField {
                     key: "user_temp".to_string(),
@@ -159,7 +161,10 @@ impl Plugin for TempCleanerPlugin {
             }
             logger.info(format!("Раздел: {}", target.label));
             if !target.path.exists() {
-                logger.warn(format!("Путь не найден: {}", target.path.display()));
+                logger.warn(format!(
+                    "Путь не найден: {}",
+                    short_path(&target.path, 4)
+                ));
                 continue;
             }
             let entries = match fs::read_dir(&target.path) {
@@ -167,8 +172,9 @@ impl Plugin for TempCleanerPlugin {
                 Err(err) => {
                     size_errors += 1;
                     logger.warn(format!(
-                        "Не удалось открыть {}: {err}",
-                        target.path.display()
+                        "Не удалось открыть {}: {}",
+                        short_path(&target.path, 4),
+                        short_error(&err)
                     ));
                     continue;
                 }
@@ -189,8 +195,9 @@ impl Plugin for TempCleanerPlugin {
                     Err(err) => {
                         size_errors += 1;
                         logger.warn(format!(
-                            "Не удалось получить метаданные {}: {err}",
-                            path.display()
+                            "Не удалось получить метаданные {}: {}",
+                            short_path(&path, 4),
+                            short_error(&err)
                         ));
                         continue;
                     }
@@ -231,7 +238,7 @@ impl Plugin for TempCleanerPlugin {
                     dirs += 1;
                     logger.info(format!(
                         "[{tag}] [dry] папка: {} ({})",
-                        path.display(),
+                        short_path(&path, 4),
                         format_bytes(size)
                     ));
                 } else {
@@ -241,15 +248,16 @@ impl Plugin for TempCleanerPlugin {
                             freed_bytes = freed_bytes.saturating_add(size);
                             logger.info(format!(
                                 "[{tag}] Удалено: {} ({})",
-                                path.display(),
+                                short_path(&path, 4),
                                 format_bytes(size)
                             ));
                         }
                         Err(err) => {
                             errors += 1;
                             logger.warn(format!(
-                                "Не удалось удалить {}: {err}",
-                                path.display()
+                                "Не удалось удалить {}: {}",
+                                short_path(&path, 4),
+                                short_error(&err)
                             ));
                         }
                     }
@@ -258,7 +266,7 @@ impl Plugin for TempCleanerPlugin {
                 files += 1;
                 logger.info(format!(
                     "[{tag}] [dry] файл: {} ({})",
-                    path.display(),
+                    short_path(&path, 4),
                     format_bytes(size)
                 ));
             } else {
@@ -268,15 +276,16 @@ impl Plugin for TempCleanerPlugin {
                         freed_bytes = freed_bytes.saturating_add(size);
                         logger.info(format!(
                             "[{tag}] Удалено: {} ({})",
-                            path.display(),
+                            short_path(&path, 4),
                             format_bytes(size)
                         ));
                     }
                     Err(err) => {
                         errors += 1;
                         logger.warn(format!(
-                            "Не удалось удалить {}: {err}",
-                            path.display()
+                            "Не удалось удалить {}: {}",
+                            short_path(&path, 4),
+                            short_error(&err)
                         ));
                     }
                 }
@@ -358,8 +367,9 @@ fn dir_size(path: &Path, mut logger: Option<&mut Logger>, errors: &mut u64) -> u
             *errors += 1;
             if let Some(logger) = logger.as_deref_mut() {
                 logger.warn(format!(
-                    "Не удалось прочитать папку {}: {err}",
-                    path.display()
+                    "Не удалось прочитать папку {}: {}",
+                    short_path(path, 3),
+                    short_error(&err)
                 ));
             }
             return size;
@@ -384,8 +394,9 @@ fn dir_size(path: &Path, mut logger: Option<&mut Logger>, errors: &mut u64) -> u
                 *errors += 1;
                 if let Some(logger) = logger.as_deref_mut() {
                     logger.warn(format!(
-                        "Не удалось получить метаданные {}: {err}",
-                        path.display()
+                        "Не удалось получить метаданные {}: {}",
+                        short_path(&path, 4),
+                        short_error(&err)
                     ));
                 }
                 continue;
@@ -401,22 +412,36 @@ fn dir_size(path: &Path, mut logger: Option<&mut Logger>, errors: &mut u64) -> u
     size
 }
 
-fn format_bytes(bytes: u64) -> String {
-    const KB: f64 = 1024.0;
-    const MB: f64 = KB * 1024.0;
-    const GB: f64 = MB * 1024.0;
-    const TB: f64 = GB * 1024.0;
-
-    let bytes_f = bytes as f64;
-    if bytes_f >= TB {
-        format!("{:.2} TB", bytes_f / TB)
-    } else if bytes_f >= GB {
-        format!("{:.2} GB", bytes_f / GB)
-    } else if bytes_f >= MB {
-        format!("{:.2} MB", bytes_f / MB)
-    } else if bytes_f >= KB {
-        format!("{:.2} KB", bytes_f / KB)
-    } else {
-        format!("{bytes} B")
+fn short_error(err: &dyn std::fmt::Display) -> String {
+    let message = err.to_string();
+    let lower = message.to_lowercase();
+    if lower.contains("os error 32")
+        || lower.contains("being used by another process")
+        || lower.contains("используется другим процессом")
+    {
+        return "файл занят другим процессом".to_string();
     }
+    if lower.contains("os error 5") || lower.contains("access is denied") {
+        return "доступ запрещён".to_string();
+    }
+    if lower.contains("os error 2")
+        || lower.contains("cannot find the file")
+        || lower.contains("cannot find the path")
+    {
+        return "файл или папка не найдены".to_string();
+    }
+    if lower.contains("os error 145") || lower.contains("directory is not empty") {
+        return "папка не пуста".to_string();
+    }
+
+    if let Some(idx) = message.find(" (os error") {
+        return message[..idx].trim().to_string();
+    }
+    if let Some(idx) = message.find(':') {
+        let tail = message[idx + 1..].trim();
+        if !tail.is_empty() {
+            return tail.to_string();
+        }
+    }
+    message.to_string()
 }

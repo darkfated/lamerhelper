@@ -27,6 +27,7 @@ impl Plugin for NetworkToolsPlugin {
             id: "network_tools".to_string(),
             name: "Сетевая очистка".to_string(),
             description: "Помогает исправить проблемы с интернетом: если сайты не открываются, соединение нестабильно или есть ошибки подключения. Действия обновляют сетевые параметры и часто быстро возвращают нормальную работу.".to_string(),
+            category: "Оптимизация".to_string(),
             settings: vec![
                 SettingField {
                     key: "flush_dns".to_string(),
@@ -42,7 +43,7 @@ impl Plugin for NetworkToolsPlugin {
                     key: "release_ip".to_string(),
                     label: "Сбросить IP‑адрес".to_string(),
                     kind: SettingKind::Boolean,
-                    description: Some("Помогает при ошибках подключения к сети. Сбрасывает текущий адрес, чтобы запросить новый.".to_string()),
+                    description: Some("Освобождает текущий DHCP‑адрес и временно отключает IP на адаптере. Полезно при переключении сети или когда нужно сбросить \"зависший\" адрес.".to_string()),
                     required: false,
                     default_value: json!(false),
                     options: None,
@@ -52,7 +53,7 @@ impl Plugin for NetworkToolsPlugin {
                     key: "renew_ip".to_string(),
                     label: "Получить новый IP‑адрес".to_string(),
                     kind: SettingKind::Boolean,
-                    description: Some("Запрашивает новый адрес после сброса. Часто помогает вернуть доступ к интернету.".to_string()),
+                    description: Some("Запрашивает адрес у DHCP‑сервера. Может вернуть тот же адрес, если аренда ещё действительна. Обычно достаточно для восстановления интернета.".to_string()),
                     required: false,
                     default_value: json!(false),
                     options: None,

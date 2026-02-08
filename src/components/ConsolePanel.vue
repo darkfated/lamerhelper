@@ -19,7 +19,6 @@ const currentHeight = ref(null);
 let startY = 0;
 let startHeight = 0;
 
-const STORAGE_KEY = "lamerhelper.consoleHeight";
 const BASE_WINDOW_HEIGHT = 720;
 const MIN_RATIO = 220 / BASE_WINDOW_HEIGHT;
 let minHeight = 220;
@@ -45,7 +44,6 @@ function onPointerMove(event) {
   if (!isResizing.value) return;
   const delta = startY - event.clientY;
   setConsoleHeight(startHeight + delta);
-  localStorage.setItem(STORAGE_KEY, String(currentHeight.value));
 }
 
 function stopResize() {
@@ -76,7 +74,6 @@ function handleWindowResize() {
 
 onMounted(() => {
   minHeight = Math.max(180, Math.floor(window.innerHeight * MIN_RATIO));
-  const saved = Number(localStorage.getItem(STORAGE_KEY));
   const initial = parseFloat(
     getComputedStyle(document.documentElement).getPropertyValue(
       "--console-height"
@@ -85,10 +82,6 @@ onMounted(() => {
 
   if (!Number.isNaN(initial) && initial > 0) {
     currentHeight.value = initial;
-  }
-
-  if (!Number.isNaN(saved) && saved > 0) {
-    setConsoleHeight(saved);
   }
 
   window.addEventListener("resize", handleWindowResize);
@@ -119,7 +112,15 @@ watch(
 <template>
   <section ref="panelRef" class="console-panel" :class="{ resizing: isResizing }">
     <div class="console-header">
-      <span>Центр выполнения</span>
+      <span class="console-title">
+        <span class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h12M4 17h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </span>
+        Центр выполнения
+      </span>
       <div class="console-resize-handle" @pointerdown="startResize" title="Изменить высоту"></div>
       <span class="console-status" :class="{ error: !status.ok }">
         {{ status.message || "Ожидание" }}
