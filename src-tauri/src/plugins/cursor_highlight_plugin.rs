@@ -63,9 +63,12 @@ impl Plugin for CursorHighlightPlugin {
     }
 
     fn defaults(&self, api: &PluginApi) -> Option<serde_json::Value> {
-        let hilight = read_registry_color(api, "Hilight", &default_hilight_color());
-        let hot_tracking =
-            read_registry_color(api, "HotTrackingColor", &default_hot_tracking_color());
+        let hilight = read_registry_color_hex(api, "Hilight")
+            .unwrap_or_else(default_hilight_color);
+
+        let hot_tracking = read_registry_color_hex(api, "HotTrackingColor")
+            .unwrap_or_else(default_hot_tracking_color);
+
         Some(json!({
             "hilight_color": hilight,
             "hot_tracking_color": hot_tracking
@@ -83,22 +86,48 @@ impl Plugin for CursorHighlightPlugin {
                 hilight_color: default_hilight_color(),
                 hot_tracking_color: default_hot_tracking_color(),
             });
-        let (r, g, b) = parse_color(&settings.hilight_color)?;
-        let hilight_value = format!("{r} {g} {b}");
-        api.set_registry_string("Control Panel\\Colors", "Hilight", &hilight_value)?;
-        logger.info(format!("Hilight установлен в {hilight_value}"));
 
-        let (r, g, b) = parse_color(&settings.hot_tracking_color)?;
-        let hot_tracking_value = format!("{r} {g} {b}");
-        api.set_registry_string(
-            "Control Panel\\Colors",
-            "HotTrackingColor",
-            &hot_tracking_value,
+        let desired_hilight = normalize_to_hex(&settings.hilight_color)?;
+        let desired_hot_tracking = normalize_to_hex(&settings.hot_tracking_color)?;
+
+        apply_color(
+            api,
+            logger,
+            "Hilight",
+            &desired_hilight,
         )?;
-        logger.info(format!("HotTrackingColor установлен в {hot_tracking_value}"));
-        logger.success("Готово! Для применения настроек перезапустите систему.".to_string());
+
+        apply_color(
+            api,
+            logger,
+            "HotTrackingColor",
+            &desired_hot_tracking,
+        )?;
+
+        logger.success("Готово! Для применения перезагрузите компьютер.".to_string());
         Ok(())
     }
+}
+
+fn apply_color(
+    api: &PluginApi,
+    logger: &mut Logger,
+    name: &str,
+    desired_hex: &str,
+) -> Result<(), String> {
+    let current_hex = read_registry_color_hex(api, name);
+
+    if current_hex.as_deref().map(|c| c.eq_ignore_ascii_case(desired_hex)) == Some(true) {
+        logger.info(format!("{name} уже установлен: {desired_hex}"));
+        return Ok(());
+    }
+
+    let (r, g, b) = parse_color(desired_hex)?;
+    let value = format!("{r} {g} {b}");
+
+    api.set_registry_string("Control Panel\\Colors", name, &value)?;
+    logger.info(format!("{name} установлен: {value}"));
+    Ok(())
 }
 
 fn parse_color(value: &str) -> Result<(u8, u8, u8), String> {
@@ -106,11 +135,11 @@ fn parse_color(value: &str) -> Result<(u8, u8, u8), String> {
         return Ok(rgb);
     }
 
-    let trimmed = value.trim();
-    let hex = trimmed.strip_prefix('#').unwrap_or(trimmed);
+    let hex = value.trim().trim_start_matches('#');
     if hex.len() != 6 {
         return Err("Цвет должен быть HEX (#RRGGBB) или RGB (R G B).".to_string());
     }
+
     let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| "Некорректный R".to_string())?;
     let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| "Некорректный G".to_string())?;
     let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| "Некорректный B".to_string())?;
@@ -118,32 +147,29 @@ fn parse_color(value: &str) -> Result<(u8, u8, u8), String> {
 }
 
 fn parse_rgb_string(value: &str) -> Option<(u8, u8, u8)> {
-    let parts: Vec<&str> = value
-        .split(|c| c == ' ' || c == ',')
-        .filter(|part| !part.trim().is_empty())
-        .collect();
+    let parts: Vec<&str> = value.split(|c| c == ' ' || c == ',').filter(|p| !p.is_empty()).collect();
     if parts.len() != 3 {
         return None;
     }
-    let r = parts[0].trim().parse::<u8>().ok()?;
-    let g = parts[1].trim().parse::<u8>().ok()?;
-    let b = parts[2].trim().parse::<u8>().ok()?;
-    Some((r, g, b))
+    Some((
+        parts[0].parse().ok()?,
+        parts[1].parse().ok()?,
+        parts[2].parse().ok()?,
+    ))
 }
 
 fn rgb_to_hex(r: u8, g: u8, b: u8) -> String {
     format!("#{:02x}{:02x}{:02x}", r, g, b)
 }
 
-fn read_registry_color(api: &PluginApi, name: &str, fallback_hex: &str) -> String {
-    match api.get_registry_string("Control Panel\\Colors", name) {
-        Ok(value) => {
-            if let Some((r, g, b)) = parse_rgb_string(&value) {
-                rgb_to_hex(r, g, b)
-            } else {
-                fallback_hex.to_string()
-            }
-        }
-        Err(_) => fallback_hex.to_string(),
-    }
+fn normalize_to_hex(input: &str) -> Result<String, String> {
+    let (r, g, b) = parse_color(input)?;
+    Ok(rgb_to_hex(r, g, b))
+}
+
+fn read_registry_color_hex(api: &PluginApi, name: &str) -> Option<String> {
+    api.get_registry_string("Control Panel\\Colors", name)
+        .ok()
+        .and_then(|v| parse_rgb_string(&v))
+        .map(|(r, g, b)| rgb_to_hex(r, g, b))
 }
