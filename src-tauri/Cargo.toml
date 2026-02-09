@@ -1,7 +1,7 @@
 [package]
 name = "lamerhelper"
-version = "0.1.0"
-description = "Приложение с плагинами"
+version = "0.2.0"
+description = "Программа с универсальными утилитами для упрощённого использования персонального компьютера."
 authors = ["darkfated"]
 edition = "2024"
 

@@ -201,6 +201,10 @@ onMounted(() => {
             <span class="settings-item-label">Авторское право</span>
             <span class="settings-item-value">© 2026 LamerHelper</span>
           </div>
+          <div class="settings-item">
+            <span class="settings-item-label">Версия программы</span>
+            <span class="settings-item-value">0.2.0</span>
+          </div>
         </div>
       </div>
     </div>
