@@ -1,6 +1,7 @@
 ﻿<script setup>
-import {invoke} from '@tauri-apps/api/core'
-import {computed, onMounted, ref} from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { openUrl } from '@tauri-apps/plugin-opener'
+import { computed, onMounted, ref } from 'vue'
 import ConsolePanel from './components/ConsolePanel.vue'
 import PluginList from './components/PluginList.vue'
 import PluginPanel from './components/PluginPanel.vue'
@@ -11,7 +12,7 @@ const viewMode = ref('list')
 const selectedId = ref('')
 const settings = ref({})
 const logs = ref([])
-const status = ref({ok: true, message: ''})
+const status = ref({ ok: true, message: '' })
 const running = ref(false)
 const error = ref('')
 const logSession = ref(0)
@@ -19,7 +20,7 @@ const preview = ref(null)
 const showSettings = ref(false)
 
 const selectedPlugin = computed(
-    () => plugins.value.find((plugin) => plugin.id === selectedId.value) || null,
+  () => plugins.value.find((plugin) => plugin.id === selectedId.value) || null,
 )
 
 function cloneValue(value) {
@@ -30,7 +31,7 @@ function resetForPlugin(plugin) {
   logSession.value += 1
   settings.value = cloneValue(plugin.defaults || {})
   logs.value = []
-  status.value = {ok: true, message: ''}
+  status.value = { ok: true, message: '' }
 }
 
 function showError(message) {
@@ -87,7 +88,7 @@ async function loadPlugins() {
 
     if (viewMode.value === 'detail') {
       const exists = plugins.value.find(
-          (plugin) => plugin.id === selectedId.value,
+        (plugin) => plugin.id === selectedId.value,
       )
       if (!exists) {
         backToList()
@@ -102,7 +103,7 @@ async function loadPlugins() {
 
 async function loadPreview(id) {
   try {
-    preview.value = await invoke('preview_plugin', {id})
+    preview.value = await invoke('preview_plugin', { id })
   } catch (err) {
     preview.value = null
   }
@@ -122,7 +123,7 @@ function backToList() {
   viewMode.value = 'list'
   selectedId.value = ''
   logs.value = []
-  status.value = {ok: true, message: ''}
+  status.value = { ok: true, message: '' }
   preview.value = null
 }
 
@@ -131,11 +132,11 @@ async function runSelected() {
   running.value = true
   const sessionId = nextLogSession()
   await appendLogs(
-      [{level: 'info', message: '--- Запуск ---'}],
-      sessionId,
-      80,
+    [{ level: 'info', message: '--- Запуск ---' }],
+    sessionId,
+    80,
   )
-  status.value = {ok: true, message: 'Выполняется...'}
+  status.value = { ok: true, message: 'Выполняется...' }
 
   try {
     const result = await invoke('run_plugin', {
@@ -144,15 +145,15 @@ async function runSelected() {
     })
     const delay = logDelay((result.logs || []).length)
     await appendLogs(result.logs || [], sessionId, delay)
-    status.value = {ok: result.ok, message: result.message}
+    status.value = { ok: result.ok, message: result.message }
   } catch (err) {
     showError(String(err))
     await appendLogs(
-        [{level: 'error', message: 'Ошибка запуска.'}],
-        sessionId,
-        100,
+      [{ level: 'error', message: 'Ошибка запуска.' }],
+      sessionId,
+      100,
     )
-    status.value = {ok: false, message: 'Ошибка запуска.'}
+    status.value = { ok: false, message: 'Ошибка запуска.' }
   } finally {
     running.value = false
   }
@@ -170,10 +171,10 @@ onMounted(() => {
     <main class="main-area" :class="{ 'no-console': viewMode === 'list' }">
       <div class="workspace" :class="{ 'detail-mode': viewMode === 'detail' }">
         <PluginList v-if="viewMode === 'list'" :plugins="plugins" :loading="loading" @select="selectPlugin"
-                    @settings="openSettings"/>
+          @settings="openSettings" />
 
         <PluginPanel v-else-if="selectedPlugin" v-model="settings" :plugin="selectedPlugin" :preview="preview"
-                     :running="running" @run="runSelected" @back="backToList"/>
+          :running="running" @run="runSelected" @back="backToList" />
 
         <div v-else class="empty-state">
           Плагин не найден.
@@ -193,7 +194,8 @@ onMounted(() => {
         <div class="settings-modal-body">
           <div class="settings-item">
             <span class="settings-item-label">GitHub</span>
-            <span class="settings-link">github.com/darkfated/lamerhelper</span>
+            <span class="settings-link" href="#" @click="openUrl('https://github.com/darkfated/lamerhelper')">
+              darkfated/lamerhelper</span>
           </div>
           <div class="settings-item">
             <span class="settings-item-label">Авторское право</span>
@@ -203,7 +205,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <ConsolePanel v-if="viewMode === 'detail'" :logs="logs" :status="status"/>
+    <ConsolePanel v-if="viewMode === 'detail'" :logs="logs" :status="status" />
 
     <div v-if="error" class="toast">{{ error }}</div>
   </div>
@@ -288,9 +290,9 @@ body {
   position: fixed;
   inset: 0;
   background: radial-gradient(circle at 12% 18%, rgba(69, 240, 177, 0.24), transparent 48%),
-  radial-gradient(circle at 86% 14%, rgba(56, 198, 255, 0.2), transparent 54%),
-  radial-gradient(circle at 50% 88%, rgba(255, 255, 255, 0.1), transparent 58%),
-  linear-gradient(140deg, #0f1626, #141c2e 45%, #0f1626 100%);
+    radial-gradient(circle at 86% 14%, rgba(56, 198, 255, 0.2), transparent 54%),
+    radial-gradient(circle at 50% 88%, rgba(255, 255, 255, 0.1), transparent 58%),
+    linear-gradient(140deg, #0f1626, #141c2e 45%, #0f1626 100%);
   z-index: -1;
 }
 
@@ -388,6 +390,7 @@ body {
   font-size: 12px;
   cursor: default;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .workspace {
@@ -1082,12 +1085,12 @@ body {
   transform: translateY(-50%);
 }
 
-.switch input:checked + .slider {
+.switch input:checked+.slider {
   background: rgba(69, 240, 177, 0.25);
   border-color: rgba(69, 240, 177, 0.5);
 }
 
-.switch input:checked + .slider::before {
+.switch input:checked+.slider::before {
   transform: translateX(18px) translateY(-50%);
   background: var(--accent);
 }
