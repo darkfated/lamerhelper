@@ -47,7 +47,7 @@ impl Plugin for CursorHighlightPlugin {
                 },
                 SettingField {
                     key: "hot_tracking_color".to_string(),
-                    label: "HotTrackingColor — панель/ссылки".to_string(),
+                    label: "HotTrackingColor — панель выделения и ссылки".to_string(),
                     kind: SettingKind::Color,
                     description: Some("HKCU\\Control Panel\\Colors\\HotTrackingColor".to_string()),
                     required: true,
@@ -96,11 +96,7 @@ impl Plugin for CursorHighlightPlugin {
             &hot_tracking_value,
         )?;
         logger.info(format!("HotTrackingColor установлен в {hot_tracking_value}"));
-        logger.info("Применяю изменения через перезапуск Explorer...".to_string());
-        match api.restart_explorer() {
-            Ok(()) => logger.success("Explorer перезапущен.".to_string()),
-            Err(err) => logger.warn(format!("Не удалось перезапустить Explorer: {err}")),
-        }
+        logger.success("Готово! Для применения настроек перезапустите систему.".to_string());
         Ok(())
     }
 }
