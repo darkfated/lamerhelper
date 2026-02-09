@@ -112,6 +112,55 @@ impl PluginApi {
     ) -> Result<(), String> {
         Err("Registry доступен только на Windows.".to_string())
     }
+
+    #[cfg(windows)]
+    pub fn registry_key_exists(&self, key_path: &str) -> Result<bool, String> {
+        use winreg::RegKey;
+        use winreg::enums::HKEY_CURRENT_USER;
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        match hkcu.open_subkey(key_path) {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    }
+
+    #[cfg(not(windows))]
+    pub fn registry_key_exists(&self, _key_path: &str) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    #[cfg(windows)]
+    pub fn create_registry_key(&self, key_path: &str) -> Result<(), String> {
+        use winreg::RegKey;
+        use winreg::enums::HKEY_CURRENT_USER;
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        hkcu.create_subkey(key_path)
+            .map_err(|e| format!("Ошибка создания ключа реестра: {e}"))?;
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    pub fn create_registry_key(&self, _key_path: &str) -> Result<(), String> {
+        Err("Registry доступен только на Windows.".to_string())
+    }
+
+    #[cfg(windows)]
+    pub fn delete_registry_key(&self, key_path: &str) -> Result<(), String> {
+        use winreg::RegKey;
+        use winreg::enums::HKEY_CURRENT_USER;
+
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        hkcu.delete_subkey_all(key_path)
+            .map_err(|e| format!("Ошибка удаления ключа реестра: {e}"))?;
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    pub fn delete_registry_key(&self, _key_path: &str) -> Result<(), String> {
+        Err("Registry доступен только на Windows.".to_string())
+    }
 }
 
 pub fn short_path(path: &Path, max_segments: usize) -> String {
